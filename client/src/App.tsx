@@ -21,11 +21,11 @@ function PrivateRoute({ component: Component, adminOnly = false }: { component: 
   if (isLoading) return null;
 
   if (!user) {
-    setLocation("/auth");
+    const nextPath = adminOnly ? "/admin" : window.location.pathname;
+    setLocation(`/auth?next=${encodeURIComponent(nextPath)}`);
     return null;
   }
 
-  // Simple admin check for demo purposes
   if (adminOnly && user.role !== 'admin') {
     setLocation("/");
     return null;

@@ -10,7 +10,8 @@ import { useLocation } from "wouter";
 
 export default function AuthPage() {
   const { login, register, isLoggingIn, isRegistering } = useAuth();
-  const [, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
+  const nextPath = new URLSearchParams(location.split("?")[1] || "").get("next") || "/";
   const [error, setError] = useState<string | null>(null);
 
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -20,7 +21,7 @@ export default function AuthPage() {
     const data = Object.fromEntries(formData);
     try {
       await login(data as any);
-      setLocation("/");
+      setLocation(nextPath);
     } catch (err: any) {
       setError(err.message);
     }

@@ -25,10 +25,10 @@ export function Navigation() {
         <Link href="/">
           <div className="flex items-center gap-2 cursor-pointer">
             <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-white font-bold font-display text-xl">
-              S
+              D
             </div>
             <span className="font-display font-bold text-xl tracking-tight hidden sm:inline-block">
-              SoulShare
+              DillKiDairy
             </span>
           </div>
         </Link>
@@ -79,8 +79,7 @@ export function Navigation() {
                     Profile
                   </DropdownMenuItem>
                 </Link>
-                {/* Simple check for admin based on username for demo purposes, rarely do this in prod but fine here */}
-                {user.email?.includes('admin') && (
+                {user.role === 'admin' && (
                   <Link href="/admin">
                     <DropdownMenuItem className="cursor-pointer">
                       <Shield className="w-4 h-4 mr-2" />
