@@ -52,12 +52,22 @@ export default function StoryDetail() {
   return (
     <div className="min-h-screen bg-background pb-20">
       <div className="container mx-auto px-4 py-8 max-w-3xl">
-        <Link href="/">
-          <Button variant="ghost" className="mb-6 pl-0 hover:bg-transparent hover:text-primary transition-colors">
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Feed
-          </Button>
-        </Link>
+        <div className="flex items-center justify-between mb-6">
+          <Link href="/">
+            <Button variant="ghost" className="pl-0 hover:bg-transparent hover:text-primary transition-colors">
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back to Feed
+            </Button>
+          </Link>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={() => {
+              const url = `https://wa.me/?text=${encodeURIComponent(story.title + " " + window.location.href)}`;
+              window.open(url, '_blank');
+            }}>
+              Share to WhatsApp
+            </Button>
+          </div>
+        </div>
 
         {/* Story Content */}
         <div className="mb-10">

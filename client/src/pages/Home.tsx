@@ -53,6 +53,24 @@ export default function Home() {
 
           {/* Main Feed */}
           <div className="lg:col-span-6 space-y-6">
+            {/* Trending Slider (Mock) */}
+            <div className="bg-muted/30 rounded-2xl p-4 overflow-hidden">
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1">
+                  <Flame className="w-3 h-3 text-orange-500" /> Trending Now
+                </h4>
+              </div>
+              <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
+                {[1, 2, 3].map(i => (
+                  <div key={i} className="min-w-[200px] bg-card p-3 rounded-xl border border-border/50 shadow-sm flex-shrink-0">
+                    <div className="h-1 w-8 bg-primary rounded-full mb-2" />
+                    <p className="text-sm font-bold line-clamp-2 mb-1">Finding peace after a decade of chaos</p>
+                    <span className="text-[10px] text-muted-foreground">1.2k reads</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
             {/* Mobile Category Scroll */}
             <div className="lg:hidden overflow-x-auto pb-2 -mx-4 px-4 flex gap-2 scrollbar-hide">
               <Button

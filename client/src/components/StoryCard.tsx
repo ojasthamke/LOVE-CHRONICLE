@@ -91,13 +91,16 @@ export function StoryCard({ story }: StoryCardProps) {
       </div>
 
       <Link href={`/story/${story.id}`}>
-        <div className="cursor-pointer group">
+        <div className="cursor-pointer group flex-1">
           <h3 className="text-xl font-bold font-display mb-2 group-hover:text-primary transition-colors">
             {story.title}
           </h3>
-          <p className="text-muted-foreground line-clamp-3 text-sm leading-relaxed">
+          <p className="text-muted-foreground line-clamp-3 text-sm leading-relaxed mb-4">
             {story.content}
           </p>
+          <Button variant="link" className="p-0 h-auto text-primary font-semibold">
+            Read full story →
+          </Button>
         </div>
       </Link>
 

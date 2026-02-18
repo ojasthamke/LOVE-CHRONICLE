@@ -47,9 +47,7 @@ export default function Profile() {
           </div>
           
           <p className="text-muted-foreground max-w-md mb-6">
-            {/* Since bio isn't in original schema, showing a placeholder or extended schema would be needed. 
-                Assuming we added it or just using static text for now based on prompt constraints. */}
-            Sharing stories, connecting souls.
+            {user.bio || "Sharing stories, connecting souls."}
           </p>
 
           <div className="flex gap-8 mb-8">
