@@ -8,6 +8,7 @@ import { useAuth } from "@/hooks/use-auth";
 
 import Home from "@/pages/Home";
 import Landing from "@/pages/Landing";
+import AuthPage from "@/pages/AuthPage";
 import StoryDetail from "@/pages/StoryDetail";
 import Profile from "@/pages/Profile";
 import AdminDashboard from "@/pages/AdminDashboard";
@@ -20,13 +21,12 @@ function PrivateRoute({ component: Component, adminOnly = false }: { component: 
   if (isLoading) return null;
 
   if (!user) {
-    // Redirect logic handled mostly by auth hooks/utils but explicit here for safety
-    window.location.href = "/api/login";
+    setLocation("/auth");
     return null;
   }
 
   // Simple admin check for demo purposes
-  if (adminOnly && !user.email?.includes('admin')) {
+  if (adminOnly && user.role !== 'admin') {
     setLocation("/");
     return null;
   }
@@ -48,6 +48,7 @@ function Router() {
           {user ? <Home /> : <Landing />}
         </Route>
 
+        <Route path="/auth" component={AuthPage} />
         <Route path="/story/:id" component={StoryDetail} />
         
         <Route path="/profile/:id">

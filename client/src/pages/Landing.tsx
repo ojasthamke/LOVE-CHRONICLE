@@ -21,12 +21,12 @@ export default function Landing() {
           </span>
         </div>
         <div className="flex items-center gap-4">
-          <a href="/api/login">
-            <Button variant="ghost" className="font-semibold">Log in</Button>
-          </a>
-          <a href="/api/login">
-            <Button className="font-semibold shadow-lg shadow-primary/25">Sign up</Button>
-          </a>
+          <Link href="/auth">
+            <Button variant="ghost" className="font-semibold cursor-pointer">Log in</Button>
+          </Link>
+          <Link href="/auth">
+            <Button className="font-semibold shadow-lg shadow-primary/25 cursor-pointer">Sign up</Button>
+          </Link>
         </div>
       </nav>
 
@@ -53,16 +53,16 @@ export default function Landing() {
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
-            <a href="/api/login">
-              <Button size="lg" className="h-14 px-8 text-lg rounded-full shadow-xl shadow-primary/20 hover:shadow-2xl hover:shadow-primary/30 transition-all hover:scale-105">
+            <Link href="/auth">
+              <Button size="lg" className="h-14 px-8 text-lg rounded-full shadow-xl shadow-primary/20 hover:shadow-2xl hover:shadow-primary/30 transition-all hover:scale-105 cursor-pointer">
                 Start Reading
               </Button>
-            </a>
-            <a href="/api/login">
-              <Button size="lg" variant="outline" className="h-14 px-8 text-lg rounded-full border-2 hover:bg-secondary/50">
+            </Link>
+            <Link href="/auth">
+              <Button size="lg" variant="outline" className="h-14 px-8 text-lg rounded-full border-2 hover:bg-secondary/50 cursor-pointer">
                 Write a Story
               </Button>
-            </a>
+            </Link>
           </div>
         </motion.div>
 
