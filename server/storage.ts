@@ -9,12 +9,13 @@ import {
   type Like, type AdminStats
 } from "@shared/schema";
 import { eq, desc, and, sql, ilike } from "drizzle-orm";
-import { authStorage } from "./replit_integrations/auth/storage";
 
 export interface IStorage {
-  // Users (Using AuthStorage for basic ops + extensions)
-  getUser(id: string): Promise<User | undefined>;
-  updateUser(id: string, updates: Partial<InsertUser>): Promise<User>;
+  // Users
+  getUser(id: number): Promise<User | undefined>;
+  getUserByUsername(username: string): Promise<User | undefined>;
+  createUser(user: InsertUser): Promise<User>;
+  updateUser(id: number, updates: Partial<InsertUser>): Promise<User>;
   getAllUsers(): Promise<User[]>;
 
   // Stories
@@ -26,34 +27,45 @@ export interface IStorage {
     cursor?: number;
   }): Promise<(Story & { author: User; category: Category | null })[]>;
   getStory(id: number): Promise<(Story & { author: User; category: Category | null }) | undefined>;
-  createStory(story: InsertStory): Promise<Story>;
+  createStory(story: { title: string; content: string; authorId: number; categoryId?: number; isAnonymous?: boolean }): Promise<Story>;
   deleteStory(id: number): Promise<void>;
   
   // Comments
   getComments(storyId: number): Promise<(Comment & { author: User })[]>;
-  createComment(comment: InsertComment): Promise<Comment>;
+  createComment(comment: { content: string; authorId: number; storyId: number }): Promise<Comment>;
 
   // Likes
-  getLike(userId: string, storyId: number): Promise<Like | undefined>;
-  toggleLike(userId: string, storyId: number): Promise<{ liked: boolean; likesCount: number }>;
+  getLike(userId: number, storyId: number): Promise<Like | undefined>;
+  toggleLike(userId: number, storyId: number): Promise<{ liked: boolean; likesCount: number }>;
 
   // Categories
   getCategories(): Promise<Category[]>;
   createCategory(category: InsertCategory): Promise<Category>;
   
   // Reports & Admin
-  createReport(report: InsertReport): Promise<Report>;
+  createReport(report: { reporterId: number; storyId?: number; commentId?: number; reason: string }): Promise<Report>;
   getReports(): Promise<(Report & { reporter: User; story: Story | null })[]>;
   updateReportStatus(id: number, status: 'resolved' | 'dismissed'): Promise<Report>;
   getAdminStats(): Promise<AdminStats>;
 }
 
 export class DatabaseStorage implements IStorage {
-  async getUser(id: string): Promise<User | undefined> {
-    return authStorage.getUser(id);
+  async getUser(id: number): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user;
   }
 
-  async updateUser(id: string, updates: Partial<InsertUser>): Promise<User> {
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user;
+  }
+
+  async createUser(user: InsertUser): Promise<User> {
+    const [newUser] = await db.insert(users).values(user).returning();
+    return newUser;
+  }
+
+  async updateUser(id: number, updates: Partial<InsertUser>): Promise<User> {
     const [user] = await db.update(users)
       .set(updates)
       .where(eq(users.id, id))
@@ -70,17 +82,8 @@ export class DatabaseStorage implements IStorage {
     search?: string; 
     sort?: 'latest' | 'trending' | 'highlight';
     limit?: number;
-    cursor?: number; // using ID based cursor for simplicity or offset? Let's use limit/offset or just getAll for MVP if small. 
-    // Actually, simple list for MVP.
   } = {}): Promise<(Story & { author: User; category: Category | null })[]> {
-    let query = db.select({
-      story: stories,
-      author: users,
-      category: categories,
-    })
-    .from(stories)
-    .innerJoin(users, eq(stories.authorId, users.id))
-    .leftJoin(categories, eq(stories.categoryId, categories.id));
+    let query: any = db.select().from(stories);
 
     const conditions = [];
     if (filters.categoryId) {
@@ -89,45 +92,57 @@ export class DatabaseStorage implements IStorage {
     if (filters.search) {
       conditions.push(ilike(stories.title, `%${filters.search}%`));
     }
-    
+
     if (conditions.length > 0) {
       // @ts-ignore
-      query.where(and(...conditions));
+      query = query.where(and(...conditions));
     }
 
     if (filters.sort === 'trending') {
-      query.orderBy(desc(stories.likesCount), desc(stories.commentsCount));
+      query = query.orderBy(desc(stories.likesCount), desc(stories.commentsCount));
     } else if (filters.sort === 'highlight') {
-       query.orderBy(desc(stories.isHighlight), desc(stories.createdAt));
+      query = query.orderBy(desc(stories.isHighlight), desc(stories.createdAt));
     } else {
-      query.orderBy(desc(stories.createdAt));
+      query = query.orderBy(desc(stories.createdAt));
     }
 
     if (filters.limit) {
-      query.limit(filters.limit);
+      query = query.limit(filters.limit);
     }
 
-    const results = await query;
-    return results.map(r => ({ ...r.story, author: r.author, category: r.category }));
+    const rawStories = await query;
+    const allUsers = await this.getAllUsers();
+    const allCategories = await this.getCategories();
+
+    const userMap = new Map(allUsers.map((u) => [u.id, u]));
+    const categoryMap = new Map(allCategories.map((c) => [c.id, c]));
+
+    return rawStories.map((story: any) => {
+      const author = userMap.get(Number((story as any).authorId));
+      return {
+        ...(story as any),
+        author: author ?? allUsers[0],
+        category: story.categoryId ? categoryMap.get(story.categoryId) ?? null : null,
+      };
+    });
   }
 
   async getStory(id: number): Promise<(Story & { author: User; category: Category | null }) | undefined> {
-    const [result] = await db.select({
-      story: stories,
-      author: users,
-      category: categories,
-    })
-    .from(stories)
-    .innerJoin(users, eq(stories.authorId, users.id))
-    .leftJoin(categories, eq(stories.categoryId, categories.id))
-    .where(eq(stories.id, id));
+    const [story] = await db.select().from(stories).where(eq(stories.id, id));
+    if (!story) return undefined;
 
-    if (!result) return undefined;
-    return { ...result.story, author: result.author, category: result.category };
+    const author = await this.getUser(Number((story as any).authorId));
+    if (!author) return undefined;
+
+    const category = story.categoryId ? (await db.select().from(categories).where(eq(categories.id, story.categoryId)))[0] ?? null : null;
+    return { ...(story as any), author, category };
   }
 
-  async createStory(story: InsertStory): Promise<Story> {
-    const [newStory] = await db.insert(stories).values(story).returning();
+  async createStory(story: { title: string; content: string; authorId: number; categoryId?: number; isAnonymous?: boolean }): Promise<Story> {
+    const [newStory] = await db.insert(stories).values({
+      ...story,
+      authorId: String(story.authorId) as any,
+    }).returning();
     return newStory;
   }
 
@@ -136,20 +151,24 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getComments(storyId: number): Promise<(Comment & { author: User })[]> {
-    const results = await db.select({
-      comment: comments,
-      author: users,
-    })
-    .from(comments)
-    .innerJoin(users, eq(comments.authorId, users.id))
-    .where(eq(comments.storyId, storyId))
-    .orderBy(desc(comments.createdAt));
+    const rows = await db.select().from(comments).where(eq(comments.storyId, storyId)).orderBy(desc(comments.createdAt));
+    const allUsers = await this.getAllUsers();
+    const userMap = new Map(allUsers.map((u) => [u.id, u]));
 
-    return results.map(r => ({ ...r.comment, author: r.author }));
+    return rows
+      .map((comment) => {
+        const author = userMap.get(Number((comment as any).authorId));
+        if (!author) return null;
+        return { ...(comment as any), author };
+      })
+      .filter((x): x is (Comment & { author: User }) => x !== null);
   }
 
-  async createComment(comment: InsertComment): Promise<Comment> {
-    const [newComment] = await db.insert(comments).values(comment).returning();
+  async createComment(comment: { content: string; authorId: number; storyId: number }): Promise<Comment> {
+    const [newComment] = await db.insert(comments).values({
+      ...comment,
+      authorId: String(comment.authorId) as any,
+    }).returning();
     
     // Increment comment count
     await db.update(stories)
@@ -159,12 +178,15 @@ export class DatabaseStorage implements IStorage {
     return newComment;
   }
 
-  async getLike(userId: string, storyId: number): Promise<Like | undefined> {
-    const [like] = await db.select().from(likes).where(and(eq(likes.userId, userId), eq(likes.storyId, storyId)));
+  async getLike(userId: number, storyId: number): Promise<Like | undefined> {
+    const [like] = await db
+      .select()
+      .from(likes)
+      .where(and(eq(likes.userId, String(userId) as any), eq(likes.storyId, storyId)));
     return like;
   }
 
-  async toggleLike(userId: string, storyId: number): Promise<{ liked: boolean; likesCount: number }> {
+  async toggleLike(userId: number, storyId: number): Promise<{ liked: boolean; likesCount: number }> {
     const existingLike = await this.getLike(userId, storyId);
     let liked = false;
 
@@ -174,7 +196,7 @@ export class DatabaseStorage implements IStorage {
         .set({ likesCount: sql`${stories.likesCount} - 1` })
         .where(eq(stories.id, storyId));
     } else {
-      await db.insert(likes).values({ userId, storyId });
+      await db.insert(likes).values({ userId: String(userId) as any, storyId });
       await db.update(stories)
         .set({ likesCount: sql`${stories.likesCount} + 1` })
         .where(eq(stories.id, storyId));
@@ -194,22 +216,33 @@ export class DatabaseStorage implements IStorage {
     return newCategory;
   }
 
-  async createReport(report: InsertReport): Promise<Report> {
-    const [newReport] = await db.insert(reports).values(report).returning();
+  async createReport(report: { reporterId: number; storyId?: number; commentId?: number; reason: string }): Promise<Report> {
+    const [newReport] = await db.insert(reports).values({
+      ...report,
+      reporterId: String(report.reporterId) as any,
+    }).returning();
     return newReport;
   }
 
   async getReports(): Promise<(Report & { reporter: User; story: Story | null })[]> {
-    const results = await db.select({
-      report: reports,
-      reporter: users,
-      story: stories,
-    })
-    .from(reports)
-    .innerJoin(users, eq(reports.reporterId, users.id))
-    .leftJoin(stories, eq(reports.storyId, stories.id));
-    
-    return results.map(r => ({ ...r.report, reporter: r.reporter, story: r.story }));
+    const allReports = await db.select().from(reports);
+    const allUsers = await this.getAllUsers();
+    const allStories = await db.select().from(stories);
+
+    const userMap = new Map(allUsers.map((u) => [u.id, u]));
+    const storyMap = new Map(allStories.map((s) => [s.id, s]));
+
+    return allReports
+      .map((report) => {
+        const reporter = userMap.get(Number((report as any).reporterId));
+        if (!reporter) return null;
+        return {
+          ...(report as any),
+          reporter,
+          story: report.storyId ? storyMap.get(report.storyId) ?? null : null,
+        };
+      })
+      .filter((x): x is (Report & { reporter: User; story: Story | null }) => x !== null);
   }
 
   async updateReportStatus(id: number, status: 'resolved' | 'dismissed'): Promise<Report> {

@@ -6,6 +6,9 @@ import { relations } from "drizzle-orm";
 
 export * from "./models/auth";
 
+export type User = typeof users.$inferSelect;
+export type InsertUser = typeof users.$inferInsert;
+
 // Users relations
 export const usersRelations = relations(users, ({ many }) => ({
   stories: many(stories),
@@ -29,7 +32,7 @@ export const stories = pgTable("stories", {
   id: serial("id").primaryKey(),
   title: varchar("title").notNull(),
   content: text("content").notNull(),
-  authorId: varchar("author_id").notNull().references(() => users.id),
+  authorId: integer("author_id").notNull().references(() => users.id),
   categoryId: integer("category_id").references(() => categories.id),
   isAnonymous: boolean("is_anonymous").default(false).notNull(),
   isHighlight: boolean("is_highlight").default(false).notNull(), // Paid feature
@@ -54,7 +57,7 @@ export const storiesRelations = relations(stories, ({ one, many }) => ({
 export const comments = pgTable("comments", {
   id: serial("id").primaryKey(),
   content: text("content").notNull(),
-  authorId: varchar("author_id").notNull().references(() => users.id),
+  authorId: integer("author_id").notNull().references(() => users.id),
   storyId: integer("story_id").notNull().references(() => stories.id),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
@@ -72,7 +75,7 @@ export const commentsRelations = relations(comments, ({ one }) => ({
 
 export const likes = pgTable("likes", {
   id: serial("id").primaryKey(),
-  userId: varchar("user_id").notNull().references(() => users.id),
+  userId: integer("user_id").notNull().references(() => users.id),
   storyId: integer("story_id").notNull().references(() => stories.id),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
@@ -90,7 +93,7 @@ export const likesRelations = relations(likes, ({ one }) => ({
 
 export const reports = pgTable("reports", {
   id: serial("id").primaryKey(),
-  reporterId: varchar("reporter_id").notNull().references(() => users.id),
+  reporterId: integer("reporter_id").notNull().references(() => users.id),
   storyId: integer("story_id").references(() => stories.id),
   commentId: integer("comment_id").references(() => comments.id),
   reason: text("reason").notNull(),

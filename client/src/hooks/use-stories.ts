@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api, buildUrl, type InsertStory } from "@shared/routes";
+import { api, buildUrl } from "@shared/routes";
+import type { InsertStory } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 
 export function useStories(params?: { categoryId?: number; sort?: 'latest' | 'trending' | 'highlight' }) {

@@ -98,7 +98,7 @@ export function StoryCard({ story }: StoryCardProps) {
           <p className="text-muted-foreground line-clamp-3 text-sm leading-relaxed mb-4">
             {story.content}
           </p>
-          <Button variant="link" className="p-0 h-auto text-primary font-semibold">
+          <Button variant="ghost" className="p-0 h-auto text-primary font-semibold hover:bg-transparent hover:text-primary/90">
             Read full story →
           </Button>
         </div>
